@@ -11,6 +11,41 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d GenSoftware"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000/api
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=GenSoftware
+      - DB_USER=user
+      - DB_PASSWORD=password
+    command: sh -c "npm run migrate && npm start"
 
   pgadmin:
     image: dpage/pgadmin4
